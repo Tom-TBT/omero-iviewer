@@ -3,6 +3,8 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const {AureliaPlugin} = require('aurelia-webpack-plugin');
 const ProvidePlugin = require('webpack/lib/ProvidePlugin');
 
+const hostIP = 'http://172.24.48.1:4080';
+
 module.exports = {
   mode: "development",
   entry: {
@@ -53,19 +55,39 @@ module.exports = {
     port: 8080,
     proxy: {
         '/iviewer': {
-            target: 'http://127.0.0.1:4080'
+            target: hostIP,
+            changeOrigin: true,
+            secure: false,
+            cookieDomainRewrite: "localhost", // so Django cookies work on localhost:8080
+            xfwd: true,
         },
         '/api': {
-            target: 'http://127.0.0.1:4080'
+            target: hostIP,
+            changeOrigin: true,
+            secure: false,
+            cookieDomainRewrite: "localhost",
+            xfwd: true,
         },
         '/webgateway': {
-            target: 'http://127.0.0.1:4080'
+            target: hostIP,
+            changeOrigin: true,
+            secure: false,
+            cookieDomainRewrite: "localhost",
+            xfwd: true,
         },
         '/webclient': {
-            target: 'http://127.0.0.1:4080'
+            target: hostIP,
+            changeOrigin: true,
+            secure: false,
+            cookieDomainRewrite: "localhost",
+            xfwd: true,
         },
         '/static': {
-            target: 'http://127.0.0.1:4080'
+            target: hostIP,
+            changeOrigin: true,
+            secure: false,
+            cookieDomainRewrite: "localhost",
+            xfwd: true,
         }
     }
   }
