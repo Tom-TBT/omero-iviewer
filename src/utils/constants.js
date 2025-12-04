@@ -225,6 +225,7 @@ export const TABS = {
 export const ROI_TABS = {
     ROI_PLANE_GRID: "ROI_PLANE_GRID",
     ROI_TABLE: "ROI_TABLE",
+    ROI_TAGS: "ROI_TAGS"
 }
 
 /**

@@ -49,4 +49,7 @@ urlpatterns = [
     # Find the index of an ROI within all ROIs for the Image (for pagination)
     re_path(r'^(?P<obj_type>(roi|shape))/(?P<obj_id>[0-9]+)/page_data/$',
             views.roi_page_data, name='omero_iviewer_roi_page_data'),
+    # List tags for ROIs
+    re_path(r'^tags/(?P<image_id>[0-9]+)/$',
+            views.get_roi_tags, name='get_roi_tags'),
 ]

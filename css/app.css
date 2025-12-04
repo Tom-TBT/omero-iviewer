@@ -170,7 +170,7 @@ span.sp-thumb-el {
 .sp-thumb-el .sp-thumb-el {
     position: absolute;
     left: 52px;
-    margin: -1px; 
+    margin: -1px;
 }
 .sp-palette .sp-thumb-active .sp-thumb-el .sp-thumb-inner {
     background-image: none;
@@ -795,7 +795,7 @@ thumbnail-slider img {
 }
 
 /* Contains .pagination-controls, .regions-header and .regions-table */
-.regions-list {
+.regions-list, .regions-tags {
     flex: 1 1 auto;
     float: left;
     overflow: hidden;

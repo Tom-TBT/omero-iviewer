@@ -913,3 +913,101 @@ def shape_stats(request, conn=None, **kwargs):
         return JsonResponse({"error": api_exception.message})
     except Exception as stats_call_exception:
         return JsonResponse({"error": repr(stats_call_exception)})
+
+#QUERIES:
+# Get Rois that have annotations
+# SELECT r FROM Roi r JOIN r.image i JOIN r.annotationLinks ral JOIN ral.child a WHERE i.id = :imageid
+
+# Get Rois that have a given annotation ID
+# SELECT r FROM Roi r JOIN r.image i JOIN r.annotationLinks ral JOIN ral.child a WHERE i.id = :imageid AND a.id = :annotationid
+
+# Get Tags for ROIs in the image
+# SELECT a FROM Roi r JOIN r.image i JOIN r.annotationLinks ral JOIN ral.child a WHERE a.class = ome.model.annotations.TagAnnotation
+
+# Get Tags for ROIs in the image with the given namespace
+# SELECT a FROM Roi r JOIN r.image i JOIN r.annotationLinks ral JOIN ral.child a WHERE a.class = ome.model.annotations.TagAnnotation AND a.ns = :namespace
+
+#proposed namespaces
+# openmicroscopy.org/omero/roi/tag
+
+@login_required()
+def get_roi_tags(request, image_id, ns_only=True, conn=None, **kwargs):
+    """
+    Get list of tags for ROIs in the image.
+    """
+    query_service = conn.getQueryService()
+    params = omero.sys.ParametersI()
+    params.addId(image_id)
+    # params.add("namespace", rstring("openmicroscopy.org/omero/roi/tag"))
+
+    query = """
+        SELECT ral FROM RoiAnnotationLink ral
+        JOIN FETCH ral.child ann
+        LEFT OUTER JOIN FETCH ral.parent roi
+        JOIN roi.image i
+        WHERE ann.class = ome.model.annotations.TagAnnotation
+            AND i.id = :id
+        ORDER BY ann.id
+    """  # AND a.ns = :namespace
+
+    results = query_service.findAllByQuery(query, params, conn.SERVICE_OPTS)
+    marshalled = []
+
+    encoder = omero_marshal.get_encoder(omero.model.TagAnnotationI)
+    last_tag_id = None
+    tag_m = None
+    for r in results:
+        tag = r._child
+        roi = r._parent
+        if last_tag_id is None or last_tag_id != tag.id.val:
+            if last_tag_id is not None:
+                # If we have a previous tag, append it to the marshalled list
+                marshalled.append(tag_m)
+            last_tag_id = tag.id.val
+            tag_m = encoder.encode(tag)
+            tag_m["rois"] = []
+        tag_m["rois"].append(roi._id._val)
+    if tag_m is not None:
+        marshalled.append(tag_m)
+
+    return JsonResponse(marshalled, safe=False)
+
+
+# @login_required()
+# def rois_by_tags(request, image_id, tags,
+#                   conn=None, **kwargs):
+#     """
+#     Get ROIs with all Shapes that have the tag IDs.
+
+#     Includes Shapes where Z or T are null.
+#     If z_end or t_end are not None, we filter by any shape within the
+#     range (inclusive of z/t_end)
+#     """
+#     query_service = conn.getQueryService()
+
+#     params = omero.sys.ParametersI()
+#     params.addId(image_id)
+#     filter = omero.sys.Filter()
+#     filter.offset = rint(request.GET.get("offset", 0))
+#     limit = min(MAX_LIMIT, int(request.GET.get("limit", MAX_LIMIT)))
+#     filter.limit = rint(limit)
+#     params.theFilter = filter
+
+#     query = get_query_for_rois_by_plane(the_z, the_t, z_end, t_end,
+#                                         load_shapes=True)
+#     rois = query_service.findAllByQuery(query, params, conn.SERVICE_OPTS)
+#     marshalled = []
+#     for r in rois:
+#         encoder = omero_marshal.get_encoder(r.__class__)
+#         if encoder is not None:
+#             marshalled.append(encoder.encode(r))
+
+#     # Modify query to only select count() and NOT paginate
+#     query = get_query_for_rois_by_plane(the_z, the_t, z_end, t_end)
+#     query = query.replace("distinct(roi.id)", "count(distinct roi.id)")
+#     params = omero.sys.ParametersI()
+#     params.addId(image_id)
+#     result = query_service.projection(query, params, conn.SERVICE_OPTS)
+#     meta = {"totalCount": result[0][0].val}
+
+#     return JsonResponse({'data': marshalled, 'meta': meta})

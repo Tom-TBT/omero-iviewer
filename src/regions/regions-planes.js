@@ -163,7 +163,7 @@ export default class RegionsPlanes {
         if (count === 0) {
             return '#ddd';
         }
-        let percent = (count - this.min_shape_count) * 100 / 
+        let percent = (count - this.min_shape_count) * 100 /
             (this.max_shape_count - this.min_shape_count);
         if (this.min_shape_count === this.max_shape_count) {
             percent = 100;
