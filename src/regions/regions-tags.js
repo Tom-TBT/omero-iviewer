@@ -3,6 +3,7 @@ import { inject, customElement, bindable, BindingEngine } from 'aurelia-framewor
 import RegionsList from './regions-list';
 import Context from '../app/context';
 import { IVIEWER, ROI_TABS } from '../utils/constants';
+import { REGIONS_SET_PROPERTY } from '../events/events';
 import { forEach } from 'jszip';
 
 @customElement('regions-tags')
@@ -69,6 +70,57 @@ export default class RegionsTags extends RegionsList {
         event.stopPropagation();
         if (!tag) return;
         tag.show = !tag.show;
+    }
+
+    /**
+     * Determine whether all shapes in the tag are currently visible.
+     * Used for checkbox checked state.
+     * @param {Object} tag
+     * @return {boolean}
+     */
+    isTagVisible(tag) {
+        if (!tag || !tag.rois || tag.rois.length === 0) return false;
+        for (let i = 0; i < tag.rois.length; i++) {
+            let roi = tag.rois[i];
+            if (!roi || !roi.shapes) continue;
+            for (let [sid, shape] of roi.shapes) {
+                if (shape.deleted && typeof shape.is_new === 'boolean' && shape.is_new) continue;
+                if (!shape.visible) return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Toggle visibility for all shapes in the given tag.
+     * @param {Object} tag
+     * @param {Event} event
+     */
+    toggleTagVisibility(tag, event) {
+        event.stopPropagation();
+        event.preventDefault();
+        const show = event.target.checked;
+        if (!tag || !tag.rois) return false;
+        const ids = [];
+        for (let i = 0; i < tag.rois.length; i++) {
+            const roi = tag.rois[i];
+            if (!roi || !roi.shapes) continue;
+            roi.shapes.forEach((s) => {
+                if (s.visible !== show && !(s.deleted && typeof s.is_new === 'boolean' && s.is_new)) {
+                    ids.push(s.shape_id);
+                }
+            });
+        }
+        if (ids.length === 0) return false;
+        this.context.publish(
+            REGIONS_SET_PROPERTY, {
+                config_id: this.regions_info.image_info.config_id,
+                property: 'visible',
+                shapes: ids,
+                value: show
+            }
+        );
+        return false;
     }
 
     /**

@@ -78,10 +78,15 @@
     <div class="regions-table" show.bind="regions_info.ready">
             <template repeat.for="tag of tags">
                 <div class="regions-tag">
-                    <div class="regions-tag-header" style="cursor: pointer;"
-                        click.delegate="expandOrCollapseTag(tag, $event)">
-                        <span class="regions-tag-toggle">${tag.show ? '&#9660;' : '&#9658;'}</span>
-                        <span class="regions-tag-value">${tag['Value']}</span>
+                    <div class="regions-tag-header" style="cursor: pointer;">
+                        <span class="regions-tag-toggle" click.delegate="expandOrCollapseTag(tag, $event)">${tag.show ? '&#9660;' : '&#9658;'}</span>
+                        <div style="display: inline-block; vertical-align: middle;">
+                            <input type="checkbox"
+                                title="Show/Hide all shapes in tag"
+                                checked.one-way="isTagVisible(tag)"
+                                change.delegate="toggleTagVisibility(tag, $event)"/>
+                        </div>
+                        <span class="regions-tag-value" click.delegate="expandOrCollapseTag(tag, $event)">${tag['Value']}</span>
                     </div>
                     <div if.bind="tag.show">
                         <template repeat.for="roi of tag['rois']">
