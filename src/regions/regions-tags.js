@@ -65,14 +65,10 @@ export default class RegionsTags extends RegionsList {
      * @param {Event} event the browser's event object
      * @memberof RegionsList
      */
-    expandOrCollapseTag(tag_id, event) {
+    expandOrCollapseTag(tag, event) {
         event.stopPropagation();
-
-        this.tags.forEach((tag) => {
-            if (tag['id'] === tag_id) {
-                tag.show = !tag.show;
-            }
-        });
+        if (!tag) return;
+        tag.show = !tag.show;
     }
 
     /**

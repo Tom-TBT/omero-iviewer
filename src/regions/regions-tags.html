@@ -79,7 +79,7 @@
             <template repeat.for="tag of tags">
                 <div class="regions-tag">
                     <div class="regions-tag-header" style="cursor: pointer;"
-                        click.delegate="expandOrCollapseTag(tag['id'], $event)">
+                        click.delegate="expandOrCollapseTag(tag, $event)">
                         <span class="regions-tag-toggle">${tag.show ? '&#9660;' : '&#9658;'}</span>
                         <span class="regions-tag-value">${tag['Value']}</span>
                     </div>
