@@ -76,9 +76,13 @@
     <div show.bind="!is_pending && regions_info.ready" style="margin-bottom: 10px">
         <div class="regions-table">
             <template repeat.for="tag of tags">
-                <div>
-                    ${tag["Value"]}
-                    <div class="regions-table">
+                <div class="regions-tag">
+                    <div class="regions-tag-header" style="cursor: pointer;"
+                        click.delegate="expandOrCollapseTag(tag['id'], $event)">
+                        <span class="regions-tag-toggle">${tag.show ? '&#9660;' : '&#9658;'}</span>
+                        <span class="regions-tag-value">${tag['Value']}</span>
+                    </div>
+                    <div if.bind="tag.show">
                         <template repeat.for="roi of tag['rois']">
                             <template repeat.for="[shape_id, shape] of roi.shapes">
                                 <div if.bind="(roi.shapes.size - roi.deleted) > 1 &&
@@ -160,7 +164,6 @@
                                 </div>
                             </template>
                         </template>
-                    </div>
                 </div>
             </template>
         </div>

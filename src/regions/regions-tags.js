@@ -3,6 +3,7 @@ import { inject, customElement, bindable, BindingEngine } from 'aurelia-framewor
 import RegionsList from './regions-list';
 import Context from '../app/context';
 import { IVIEWER, ROI_TABS } from '../utils/constants';
+import { forEach } from 'jszip';
 
 @customElement('regions-tags')
 @inject(Context, BindingEngine)
@@ -58,6 +59,23 @@ export default class RegionsTags extends RegionsList {
     }
 
     /**
+     * Show/Hide rois within tag
+     *
+     * @param {number} tag_id the tag id
+     * @param {Event} event the browser's event object
+     * @memberof RegionsList
+     */
+    expandOrCollapseTag(tag_id, event) {
+        event.stopPropagation();
+
+        this.tags.forEach((tag) => {
+            if (tag['id'] === tag_id) {
+                tag.show = !tag.show;
+            }
+        });
+    }
+
+    /**
      * When the regions_info changes, force load/refresh data
      * @param {RegionsInfo} newVal
      * @param {RegionsInfo} oldVal
@@ -101,6 +119,8 @@ export default class RegionsTags extends RegionsList {
                 this.tags = [];
                 for (let t=0; t<response.length; t++) {
                     let tag = response[t];
+                    // default tags expanded
+                    tag.show = false;
                     let rois = tag["rois"];
                     tag["rois"] = [];
                     for (let r=0; r<rois.length; r++) {
