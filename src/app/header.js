@@ -268,6 +268,16 @@ export class Header {
     }
 
     /**
+     * Delegates pasteShapesWithScale
+     *
+     * @memberof Header
+     */
+    pasteShapesWithScale() {
+        if (this.image_config === null) return;
+        this.image_config.regions_info.pasteShapes(null, true);
+    }
+
+    /**
      * Delegates deleteShapes
      *
      * @memberof Header

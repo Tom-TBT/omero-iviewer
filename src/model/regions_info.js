@@ -19,13 +19,14 @@
 import {noView} from 'aurelia-framework';
 import RegionsHistory from './regions_history';
 import Misc from '../utils/misc';
+import {Utils} from '../utils/regions';
 import {Converters} from '../utils/converters';
 import {
     REGIONS_COPY_SHAPES, REGIONS_GENERATE_SHAPES, REGIONS_SET_PROPERTY
 } from '../events/events';
 import {
     IVIEWER, REGIONS_DRAWING_MODE, REGIONS_MODE, REGIONS_REQUEST_URL,
-    WEB_API_BASE,
+    WEB_API_BASE
 } from '../utils/constants';
 
 /**
@@ -309,11 +310,11 @@ export default class RegionsInfo  {
      * We track how many shapes aren't visible to check the
      * 'Show All' checkbox when they are all shown (toggle count ==0);
      * We also do this for each ROI since each ROI also has a
-     * 'Show All' checkbox 
+     * 'Show All' checkbox
      *
      * @memberof RegionsInfo
      * @param {string} id a shape id in format roi:shape-id
-     * @param {number} increment update counts by this number 
+     * @param {number} increment update counts by this number
      */
     updateRoiVisibilityToggles(shape_id, increment) {
         // Update total count
@@ -730,7 +731,7 @@ export default class RegionsInfo  {
         //if they set a color palette, set the first one as default stroke color
         if(Array.isArray(this.image_info.context.roi_color_palette)){
             this.shape_defaults['StrokeColor'] = Converters.rgbaToSignedInteger(this.image_info.context.roi_color_palette[0][0])
-        } else { 
+        } else {
             this.shape_defaults['StrokeColor'] = -65281;
         }
         this.shape_defaults['FillColor'] = -256;
@@ -813,9 +814,10 @@ export default class RegionsInfo  {
      * Paste Shapes
      *
      * @param {Array.<number>} pixel the pixel location as: [x,y]
+     * @param {boolean} scale whether to scale the shapes to fit the target image pixel size
      * @memberof RegionsInfo
      */
-    pasteShapes(pixel=null) {
+    pasteShapes(pixel=null, scale=false) {
         if (!this.ready ||
             !this.image_info.can_annotate ||
             this.copied_shapes.length === 0) return;
@@ -825,10 +827,22 @@ export default class RegionsInfo  {
             this.copied_image_dims &&
             this.copied_image_dims.width <= this.image_info.dimensions.max_x &&
             this.copied_image_dims.height <= this.image_info.dimensions.max_y;
+
+        let shapes = [];
+        let x_ratio = this.copied_image_dims.x / this.image_info.image_pixels_size.x;
+        let y_ratio = this.copied_image_dims.y / this.image_info.image_pixels_size.y;
+        if (!scale || !y_ratio || !x_ratio || !Number.isFinite(x_ratio) || !Number.isFinite(y_ratio)) {
+            shapes = this.copied_shapes;
+        } else {
+            this.copied_shapes.forEach((shape) => {
+                shapes.push(Utils.scale_shape_xy(shape, x_ratio, y_ratio));
+            });
+        }
+
         let params = {
             config_id: this.image_info.config_id,
             number: 1, paste: true,
-            shapes: this.copied_shapes,
+            shapes: shapes,
             is_compatible: isCompatibleTargetImage,
             hist_id: this.history.getHistoryId(),
             position: pixel

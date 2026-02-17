@@ -485,7 +485,7 @@ export default class Ol3Viewer extends EventSubscriber {
                      container: this.container
                  });
         delete this.image_config.image_info.tmp_data;
-        
+
         // hide controls for mdi when more than 1 image configs
         if (this.context.useMDI && this.context.image_configs.size > 1)
             this.toggleControlsVisibility({
@@ -835,7 +835,7 @@ export default class Ol3Viewer extends EventSubscriber {
                 let lastSelected =
                     this.image_config.regions_info.selected_shapes[
                         numberOfSelectedShapes-1];
-                // if last-selected is not being de-selected, select it 
+                // if last-selected is not being de-selected, select it
                 if (lastSelected !== shapeSelection) {
                     shapeSelection = lastSelected;
                 } else if (numberOfSelectedShapes > 1) {
@@ -1355,7 +1355,9 @@ export default class Ol3Viewer extends EventSubscriber {
                 IVIEWER + ".copy_image_dims",
                 JSON.stringify({
                     width: this.image_config.image_info.dimensions.max_x,
-                    height: this.image_config.image_info.dimensions.max_y
+                    height: this.image_config.image_info.dimensions.max_y,
+                    x: this.image_config.image_info.image_pixels_size.x,
+                    y: this.image_config.image_info.image_pixels_size.y
             }));
             // remember shape definitions for generating copies
             window.localStorage.setItem(

@@ -967,6 +967,15 @@ export default class RegionsEdit extends EventSubscriber {
     }
 
     /**
+     * Paste Shapes with scale
+     *
+     * @memberof RegionsEdit
+     */
+    pasteShapesWithScale() {
+        this.regions_info.pasteShapes(pixel=null, scale=true);
+    }
+
+    /**
      * Deletes selected shapes (incl. permissions check)
      *
      * @memberof RegionsEdit

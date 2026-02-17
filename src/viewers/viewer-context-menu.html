@@ -30,6 +30,14 @@
             <a click.delegate="pasteShapes()"
                tabindex="-1" href="#">Paste ROI here</a>
         </li>
+        <li show.bind="image_config.regions_info.ready"
+            class="${image_config.image_info.can_annotate &&
+                     image_config.regions_info.copied_shapes.length > 0 ?
+                        '' : 'disabled-color'}"
+            title="Paste the ROI after scaling to the current image pixel size.">
+            <a click.delegate="pasteShapesWithScale()"
+               tabindex="-1" href="#">Paste scaled ROI here</a>
+        </li>
         <li class="${image_config.image_info.ready ? '' : 'disabled-color'}">
             <a click.delegate="captureViewport()"
                tabindex="-1" href="#">Save Viewport as PNG</a>

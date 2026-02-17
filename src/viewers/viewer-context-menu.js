@@ -210,6 +210,19 @@ export default class ViewerContextMenu {
     }
 
     /**
+     * Paste Shapes with scale
+     *
+     * @memberof ViewerContextMenu
+     */
+    pasteShapesWithScale() {
+        this.image_config.regions_info.pasteShapes(this.viewport_location, true);
+        // hide context menu
+        this.hideContextMenu();
+        // prevent link click behavior
+        return false;
+    }
+
+    /**
      * Sends event to captures viewport as png
      *
      * @memberof ViewerContextMenu

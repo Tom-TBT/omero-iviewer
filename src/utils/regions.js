@@ -205,4 +205,59 @@ export class Utils {
 
         return callback;
      }
+
+    /**
+     * Scales a shape size and position by the given x and y ratios, returns the modified shape.
+     *
+     * @static
+     * @param {Object} shape the shape to be scaled
+     * @param {number} x_ratio the ratio to scale x by
+     * @param {number} y_ratio the ratio to scale y by
+     * @returns {Object} the scaled shape
+     */
+    static scale_shape_xy(shape, x_ratio, y_ratio) {
+        if (typeof shape !== 'object' || shape === null) return;
+        if (typeof x_ratio !== 'number' || typeof y_ratio !== 'number') return;
+        if (x_ratio === 1 && y_ratio === 1) return shape;
+
+        switch(shape['@type']) {
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Rectangle':
+                shape['Width'] = shape['Width'] * x_ratio;
+                shape['Height'] = shape['Height'] * y_ratio;
+                shape['X'] = shape['X'] * x_ratio;
+                shape['Y'] = shape['Y'] * y_ratio;
+                break;
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Ellipse':
+                shape['RadiusX'] = shape['RadiusX'] * x_ratio;
+                shape['RadiusY'] = shape['RadiusY'] * y_ratio;
+                shape['X'] = shape['X'] * x_ratio;
+                shape['Y'] = shape['Y'] * y_ratio;
+                break;
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Line':
+                shape['X1'] = shape['X1'] * x_ratio;
+                shape['Y1'] = shape['Y1'] * y_ratio;
+                shape['X2'] = shape['X2'] * x_ratio;
+                shape['Y2'] = shape['Y2'] * y_ratio;
+                break;
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Polygon':
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Polyline':
+                var new_points = [];
+                shape['Points'].split(' ').forEach((point, index) => {
+                    let [x, y] = point.split(',').map(Number);
+                    x = x * x_ratio;
+                    y = y * y_ratio;
+                    new_points.push(`${x},${y}`);
+                });
+                shape['Points'] = new_points.join(' ');
+                break;
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Point':
+            case 'http://www.openmicroscopy.org/Schemas/OME/2016-06#Label':
+                shape['X'] = shape['X'] * x_ratio;
+                shape['Y'] = shape['Y'] * y_ratio;
+                break;
+            default:
+                break;
+        }
+        return shape;
+    }
 }
