@@ -20,6 +20,7 @@
     <require from="./regions-drawing"></require>
     <require from="./regions-edit"></require>
     <require from="./regions-planes"></require>
+    <require from="./regions-tags"></require>
 
     <div class="regions-container">
         <div class="regions-tools">
@@ -96,6 +97,9 @@
             <li class="${selected_roi_tab === ROI_TABS.ROI_PLANE_GRID ? 'active' : ''}">
                 <a href="#${ ROI_TABS.ROI_PLANE_GRID }" role="tab">Planes</a>
             </li>
+            <li class="${selected_roi_tab === ROI_TABS.ROI_TAGS ? 'active' : ''}">
+                <a href="#${ ROI_TABS.ROI_TAGS }" role="tab">Tags</a>
+            </li>
         </ul>
         <div id="regions-tabs-content" class="tab-content">
             <div id="roi-table"
@@ -107,6 +111,11 @@
                 class="tab-pane ${selected_roi_tab === ROI_TABS.ROI_PLANE_GRID ? 'active' : ''}">
                 <regions-planes regions_info.bind="regions_info" selected_roi_tab.bind="selected_roi_tab">
                 </regions-planes>
+            </div>
+            <div id="roi-tags" role="tabpanel"
+                class="tab-pane ${selected_roi_tab === ROI_TABS.ROI_TAGS ? 'active' : ''}">
+                <regions-tags regions_info.bind="regions_info" selected_roi_tab.bind="selected_roi_tab">
+                </regions-tags>
             </div>
         </div>
     </div>

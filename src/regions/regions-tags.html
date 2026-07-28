@@ -1,0 +1,43 @@
+<!--
+    Copyright (C) 2025 University of Dundee & Open Microscopy Environment.
+    All rights reserved.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<template>
+    <div class="regions-tags">
+        <div class="disabled-color loading-text" show.bind="is_pending">
+            Loading Tags...
+        </div>
+        <!-- temporary flat dump, replaced by the nested tree in a follow-up -->
+        <div show.bind="!is_pending && tags_info !== null">
+            <div class="regions-header">Tagsets</div>
+            <template repeat.for="tagset of tagsets_list">
+                <div>${tagset.text} (#${tagset.id})</div>
+            </template>
+            <div class="regions-header">Tags</div>
+            <template repeat.for="tag of tags_list">
+                <div>${tag.text} (#${tag.id}) tagset: ${tag.tagset_id}</div>
+            </template>
+            <div class="regions-header">Roi Tags</div>
+            <template repeat.for="entry of tags_info.roi_tags">
+                <div>roi ${entry[0]} - tag ${entry[1]}</div>
+            </template>
+            <div class="regions-header">Shape Tags</div>
+            <template repeat.for="entry of tags_info.shape_tags">
+                <div>roi ${entry[0]} - shape ${entry[1]} - tag ${entry[2]}</div>
+            </template>
+        </div>
+    </div>
+</template>
