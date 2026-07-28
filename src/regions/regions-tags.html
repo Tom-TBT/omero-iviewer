@@ -17,26 +17,61 @@
 -->
 <template>
     <div class="regions-tags">
-        <div class="disabled-color loading-text" show.bind="is_pending">
+        <div class="disabled-color loading-text"
+            show.bind="is_pending || (regions_info !== null && !regions_info.ready)">
             Loading Tags...
         </div>
-        <!-- temporary flat dump, replaced by the nested tree in a follow-up -->
-        <div show.bind="!is_pending && tags_info !== null">
-            <div class="regions-header">Tagsets</div>
-            <template repeat.for="tagset of tagsets_list">
-                <div>${tagset.text} (#${tagset.id})</div>
-            </template>
-            <div class="regions-header">Tags</div>
-            <template repeat.for="tag of tags_list">
-                <div>${tag.text} (#${tag.id}) tagset: ${tag.tagset_id}</div>
-            </template>
-            <div class="regions-header">Roi Tags</div>
-            <template repeat.for="entry of tags_info.roi_tags">
-                <div>roi ${entry[0]} - tag ${entry[1]}</div>
-            </template>
-            <div class="regions-header">Shape Tags</div>
-            <template repeat.for="entry of tags_info.shape_tags">
-                <div>roi ${entry[0]} - shape ${entry[1]} - tag ${entry[2]}</div>
+        <div class="disabled-color loading-text"
+            show.bind="!is_pending && regions_info !== null && regions_info.ready &&
+                       tree !== null && rows.length === 0">
+            No tags on this image
+        </div>
+
+        <div class="regions-table tags-table"
+            show.bind="!is_pending && tree !== null && rows.length > 0">
+            <template repeat.for="row of rows">
+                <div class="regions-table-row tags-table-row"
+                    id="${'tag-tree-row-' + row.key}">
+                    <div class="regions-table-col tree-indent"
+                        css="width: ${20 + row.depth * 16}px;">
+                        <span class="tree-toggle"
+                            if.bind="row.type !== 'shape'"
+                            click.delegate="toggleNode(row.node, $event)">
+                            ${row.node.show ? '&#9660;' : '&#9658;'}
+                        </span>
+                    </div>
+                    <div class="regions-table-col tags-icon"
+                        if.bind="row.type === 'tagset'">
+                        <img src.bind="getIconUrl('tags')" />
+                    </div>
+                    <div class="regions-table-col tags-icon"
+                        if.bind="row.type === 'tag'">
+                        <img src.bind="getIconUrl('tag')" />
+                    </div>
+                    <div class="regions-table-col tags-label">
+                        <template if.bind="row.type === 'tagset' || row.type === 'tag'">
+                            ${row.node.text}
+                        </template>
+                        <template if.bind="row.type === 'roi'">
+                            ${row.node.missing ?
+                                ('ROI ' + row.node.roi_id) :
+                                (row.node.roi.name || ('ROI ' + row.node.roi_id))}
+                        </template>
+                        <template if.bind="row.type === 'shape'">
+                            ${row.node.missing ?
+                                ('Shape ' + row.node.shape_id) :
+                                (row.node.shape.Text || ('Shape ' + row.node.shape_id))}
+                        </template>
+                    </div>
+                    <div class="regions-table-col shape-z"
+                        if.bind="row.type === 'shape' && !row.node.missing">
+                        ${row.node.shape.TheZ !== -1 ? (row.node.shape.TheZ + 1) : ""}
+                    </div>
+                    <div class="regions-table-col shape-t"
+                        if.bind="row.type === 'shape' && !row.node.missing">
+                        ${row.node.shape.TheT !== -1 ? (row.node.shape.TheT + 1) : ""}
+                    </div>
+                </div>
             </template>
         </div>
     </div>
