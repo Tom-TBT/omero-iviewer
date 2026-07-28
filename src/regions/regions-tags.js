@@ -18,6 +18,7 @@
 
 import Context from '../app/context';
 import { IVIEWER, ROI_TABS, WEBCLIENT } from '../utils/constants';
+import { REGIONS_SET_PROPERTY } from '../events/events';
 import { inject, customElement, bindable, BindingEngine } from 'aurelia-framework';
 
 /**
@@ -398,5 +399,71 @@ export default class RegionsTags {
         event.stopPropagation();
         node.show = !node.show;
         this.flatten();
+    }
+
+    /**
+     * Collects all (live) Shape objects that fall under a given row,
+     * i.e. all its descendant Shapes - a Shape row is just itself, a Roi
+     * row is all its Shapes, a Tag row is all its Rois' Shapes plus its
+     * directly tagged Shapes, and a Tagset row is all of its Tags'.
+     *
+     * @param {Object} row a row, as produced by flatten()
+     * @return {Array.<Object>} the live shape objects found
+     */
+    collectShapes(row) {
+        const shapes = [];
+        const addRoiShapes = (roiNode) => {
+            if (roiNode.roi && roiNode.roi.shapes instanceof Map) {
+                roiNode.roi.shapes.forEach((s) => shapes.push(s));
+            }
+        };
+        const addTagShapes = (tag) => {
+            tag.rois.forEach(addRoiShapes);
+            tag.shapes.forEach((s) => { if (s.shape) shapes.push(s.shape); });
+        };
+
+        if (row.type === 'shape') {
+            if (row.node.shape) shapes.push(row.node.shape);
+        } else if (row.type === 'roi') {
+            addRoiShapes(row.node);
+        } else if (row.type === 'tag') {
+            addTagShapes(row.node);
+        } else if (row.type === 'tagset') {
+            row.node.tags.forEach(addTagShapes);
+        }
+        return shapes;
+    }
+
+    /**
+     * Whether every Shape under a row is currently visible, used to drive
+     * the row's visibility checkbox (no indeterminate/tri-state in v1).
+     *
+     * @param {Object} row a row, as produced by flatten()
+     */
+    isRowVisible(row) {
+        return this.collectShapes(row).every((s) => s.visible);
+    }
+
+    /**
+     * Batch-toggles the visibility of every Shape under a row.
+     *
+     * @param {Object} row a row, as produced by flatten()
+     * @param {Object} event the mouse event object
+     */
+    toggleVisibility(row, event) {
+        event.stopPropagation();
+        event.preventDefault();
+        const checked = event.target.checked;
+        const shape_ids = this.collectShapes(row)
+            .filter((s) => s.visible !== checked)
+            .map((s) => s.shape_id);
+        if (shape_ids.length === 0) return;
+        this.context.publish(
+            REGIONS_SET_PROPERTY, {
+                config_id: this.regions_info.image_info.config_id,
+                property: 'visible',
+                shapes: shape_ids,
+                value: checked
+            });
     }
 }

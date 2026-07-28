@@ -40,6 +40,13 @@
                             ${row.node.show ? '&#9660;' : '&#9658;'}
                         </span>
                     </div>
+                    <div class="regions-table-col shape-show"
+                        if.bind="!row.node.missing">
+                        <input type="checkbox"
+                            title="Show/Hide"
+                            checked.one-way="isRowVisible(row)"
+                            change.delegate="toggleVisibility(row, $event)"/>
+                    </div>
                     <div class="regions-table-col tags-icon"
                         if.bind="row.type === 'tagset'">
                         <img src.bind="getIconUrl('tags')" />
