@@ -621,6 +621,11 @@ export default class RegionsTags {
             }
             shape_ids = Array.from(row.node.roi.shapes.values())
                 .map((s) => s.shape_id);
+            // expand, so the newly-selected shapes are visible right away
+            if (!row.node.show) {
+                row.node.show = true;
+                this.flatten();
+            }
         } else if (row.type === 'shape') {
             if (row.node.missing) return;
             shape_ids = [row.node.shape.shape_id];
