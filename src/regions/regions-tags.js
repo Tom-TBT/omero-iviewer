@@ -67,6 +67,7 @@ export default class RegionsTags {
     selected_roi_tabChanged(newVal, oldVal) {
         if (this.selected_roi_tab !== ROI_TABS.ROI_TAGS) return;
         if (!this.regions_info || !this.regions_info.ready) return;
+        this.registerObservers();
         if (this.tags_info === null) this.requestData();
         else this.buildTree();
     }
@@ -106,6 +107,32 @@ export default class RegionsTags {
     regions_ready_observer = null;
 
     /**
+     * Observers that watch regions_info.selected_shapes/visibility_toggles,
+     * so that selection/visibility changes made elsewhere (the viewer, the
+     * ROIs tab, or this tab's own toggles) are reflected here too - a Shape
+     * or Roi's own selected/visible flag is mutated in place, not via
+     * reassignment, so nothing would otherwise tell this tab's rows to
+     * re-render (see registerObservers/flatten).
+     * @memberof RegionsTags
+     * @type {Array.<Object>}
+     */
+    observers = [];
+
+    /**
+     * Which Shape attribute Shape lists (within a Roi, or directly under a
+     * Tag) are ordered by - one of 'theC', 'theT', 'shapeText', or null for
+     * the natural (Z/T import) order. Applies wherever a list of Shapes is
+     * rendered, i.e. "within tags".
+     * @type {String}
+     */
+    sortBy = null;
+
+    /**
+     * @type {Boolean}
+     */
+    sortAscending = true;
+
+    /**
      * @constructor
      * @param {Context} context the application context (injected)
      * @param {BindingEngine} bindingEngine the BindingEngine (injected)
@@ -132,10 +159,46 @@ export default class RegionsTags {
      * @memberof RegionsTags
      */
     unbind() {
+        this.unregisterObservers();
         if (this.regions_ready_observer) {
             this.regions_ready_observer.dispose();
             this.regions_ready_observer = null;
         }
+    }
+
+    /**
+     * Registers the selected_shapes/visibility_toggles observers (once -
+     * a no-op if already registered for the current regions_info).
+     *
+     * @memberof RegionsTags
+     */
+    registerObservers() {
+        if (this.observers.length > 0 || this.regions_info === null) return;
+        // deferred: flatten() reassigns this.rows, which makes the
+        // repeat.for tear down/rebuild every row's DOM. Publishing a
+        // visibility/selection change from one of our own checkboxes ends
+        // up back here *synchronously*, while that same checkbox is still
+        // mid-"change" event - rebuilding its element out from under it
+        // right then stops the browser from ever showing the new state.
+        // Doing it on the next tick lets the originating event finish first.
+        const deferredFlatten = () => setTimeout(() => this.flatten(), 0);
+        this.observers.push(
+            this.bindingEngine.collectionObserver(
+                this.regions_info.selected_shapes).subscribe(deferredFlatten));
+        this.observers.push(
+            this.bindingEngine.propertyObserver(
+                this.regions_info, 'visibility_toggles')
+                .subscribe(deferredFlatten));
+    }
+
+    /**
+     * Disposes the selected_shapes/visibility_toggles observers.
+     *
+     * @memberof RegionsTags
+     */
+    unregisterObservers() {
+        this.observers.forEach((o) => { if (o) o.dispose(); });
+        this.observers = [];
     }
 
     /**
@@ -146,6 +209,7 @@ export default class RegionsTags {
      * @memberof RegionsTags
      */
     waitForRegionsInfoReady() {
+        this.unregisterObservers();
         if (this.regions_ready_observer) {
             this.regions_ready_observer.dispose();
             this.regions_ready_observer = null;
@@ -153,6 +217,7 @@ export default class RegionsTags {
         if (this.regions_info === null) return;
 
         const onceReady = () => {
+            this.registerObservers();
             if (this.selected_roi_tab !== ROI_TABS.ROI_TAGS) return;
             if (this.tags_info === null) this.requestData(true);
             else this.buildTree();
@@ -320,7 +385,10 @@ export default class RegionsTags {
             });
             if (roiNode.show && roiNode.roi &&
                 roiNode.roi.shapes instanceof Map) {
-                roiNode.roi.shapes.forEach((shape, shape_id) => {
+                const shapes = this.sortShapeRefs(
+                    Array.from(roiNode.roi.shapes.values()), (s) => s);
+                shapes.forEach((shape) => {
+                    const shape_id = shape['@id'];
                     rows.push({
                         type: 'shape', depth: depth + 2,
                         key: roiKey + '-shape-' + shape_id,
@@ -329,7 +397,7 @@ export default class RegionsTags {
                 });
             }
         });
-        tag.shapes.forEach((shapeRef) => {
+        this.sortShapeRefs(tag.shapes, (e) => e.shape).forEach((shapeRef) => {
             rows.push({
                 type: 'shape', depth: depth + 1,
                 key: 'tagshape-' + tag.id + '-' + shapeRef.shape_id,
@@ -350,7 +418,10 @@ export default class RegionsTags {
         rows.push({ type: 'roi', depth, key: roiKey, node: roiNode });
         if (roiNode.show && roiNode.roi &&
             roiNode.roi.shapes instanceof Map) {
-            roiNode.roi.shapes.forEach((shape, shape_id) => {
+            const shapes = this.sortShapeRefs(
+                Array.from(roiNode.roi.shapes.values()), (s) => s);
+            shapes.forEach((shape) => {
+                const shape_id = shape['@id'];
                 rows.push({
                     type: 'shape', depth: depth + 1,
                     key: roiKey + '-shape-' + shape_id,
@@ -358,6 +429,66 @@ export default class RegionsTags {
                 });
             });
         }
+    }
+
+    /**
+     * Sorting value for a Shape for the currently active sortBy attribute.
+     * Mirrors the getNumberAttr/getShapeText helpers in sort.js: -1 (the
+     * "applies to all planes" placeholder) sorts last, like a missing value.
+     *
+     * @param {Object} shape a (live) Shape object
+     * @return {String|Number|undefined}
+     */
+    shapeSortValue(shape) {
+        if (!shape) return undefined;
+        if (this.sortBy === 'shapeText') return (shape.Text || '').toLowerCase();
+        const attr = this.sortBy === 'theC' ? 'TheC' : 'TheT';
+        const value = shape[attr];
+        return value === -1 ? undefined : value;
+    }
+
+    /**
+     * Sorts a list of entries by the currently active sortBy/sortAscending,
+     * without mutating the input (in particular, never reorders the Shapes
+     * Map shared with regions_info.data / the ROIs tab).
+     *
+     * @param {Array.<Object>} entries Shape objects, or wrapper objects
+     * @param {Function} getShape (entry) => the Shape object to sort by
+     * @return {Array.<Object>} a new, sorted array
+     */
+    sortShapeRefs(entries, getShape) {
+        if (!this.sortBy) return entries;
+        const sorted = entries.slice().sort((a, b) => {
+            const av = this.shapeSortValue(getShape(a));
+            const bv = this.shapeSortValue(getShape(b));
+            if (av === undefined && bv === undefined) return 0;
+            if (av === undefined) return 1;
+            if (bv === undefined) return -1;
+            if (av > bv) return 1;
+            if (av < bv) return -1;
+            return 0;
+        });
+        return this.sortAscending ? sorted : sorted.reverse();
+    }
+
+    /**
+     * Sets/toggles the Shape sort attribute (see sortBy) and re-flattens.
+     * @param {String} value one of 'theC', 'theT', 'shapeText'
+     */
+    sort(value) {
+        this.sortAscending = this.sortBy === value ? !this.sortAscending : true;
+        this.sortBy = value;
+        this.flatten();
+    }
+
+    /**
+     * CSS class for a sortable column header, matching regions-list.html's
+     * sortable/asc/desc arrow convention.
+     * @param {String} attrName one of 'theC', 'theT', 'shapeText'
+     */
+    sortCss(attrName) {
+        if (attrName !== this.sortBy) return 'sortable';
+        return this.sortAscending ? 'sortable asc' : 'sortable desc';
     }
 
     /**
@@ -452,18 +583,60 @@ export default class RegionsTags {
      */
     toggleVisibility(row, event) {
         event.stopPropagation();
-        event.preventDefault();
-        const checked = event.target.checked;
+        const checked = !this.isRowVisible(row);
         const shape_ids = this.collectShapes(row)
             .filter((s) => s.visible !== checked)
             .map((s) => s.shape_id);
-        if (shape_ids.length === 0) return;
+        if (shape_ids.length === 0) return true;
         this.context.publish(
             REGIONS_SET_PROPERTY, {
                 config_id: this.regions_info.image_info.config_id,
                 property: 'visible',
                 shapes: shape_ids,
                 value: checked
+            });
+        return true;
+    }
+
+    /**
+     * Selects a Roi or Shape row, syncing selection/highlight with the
+     * viewer and the ROIs tab. Mirrors selectShape() in regions-list.js,
+     * simplified for this read-only navigation tab: single-select only,
+     * always replacing the prior selection (no ctrl/shift multi-select).
+     *
+     * @param {Object} row a row, as produced by flatten()
+     * @param {Object} event the mouse event object
+    */
+    selectRow(row, event) {
+        // let the visibility checkbox handle its own clicks - returning
+        // true (rather than undefined) stops Aurelia from calling
+        // event.preventDefault(), which would otherwise cancel the
+        // checkbox's native toggle before it can fire its own change event
+        if (event.target.tagName.toUpperCase() === 'INPUT') return true;
+
+        let shape_ids;
+        if (row.type === 'roi') {
+            if (row.node.missing || !(row.node.roi.shapes instanceof Map)) {
+                return;
+            }
+            shape_ids = Array.from(row.node.roi.shapes.values())
+                .map((s) => s.shape_id);
+        } else if (row.type === 'shape') {
+            if (row.node.missing) return;
+            shape_ids = [row.node.shape.shape_id];
+        } else {
+            return;
+        }
+        if (shape_ids.length === 0) return;
+
+        this.context.publish(
+            REGIONS_SET_PROPERTY, {
+                config_id: this.regions_info.image_info.config_id,
+                property: 'selected',
+                shapes: shape_ids,
+                clear: true,
+                value: true,
+                center: true
             });
     }
 }

@@ -29,9 +29,21 @@
 
         <div class="regions-table tags-table"
             show.bind="!is_pending && tree !== null && rows.length > 0">
+            <div class="regions-header tags-header">
+                <div class="tags-header-spacer"></div>
+                <div class="regions-table-col tags-label ${sortCss('shapeText')}"
+                    click.delegate="sort('shapeText')">Comment</div>
+                <div class="regions-table-col shape-c ${sortCss('theC')}"
+                    click.delegate="sort('theC')">C</div>
+                <div class="regions-table-col shape-t ${sortCss('theT')}"
+                    click.delegate="sort('theT')">T</div>
+            </div>
             <template repeat.for="row of rows">
                 <div class="regions-table-row tags-table-row"
-                    id="${'tag-tree-row-' + row.key}">
+                    id="${'tag-tree-row-' + row.key}"
+                    css="${row.type === 'shape' && !row.node.missing && row.node.shape.selected ?
+                            'background-color: #d0d0ff;' : ''}"
+                    click.delegate="selectRow(row, $event)">
                     <div class="regions-table-col tree-indent"
                         css="width: ${20 + row.depth * 16}px;">
                         <span class="tree-toggle"
@@ -47,13 +59,11 @@
                             checked.one-way="isRowVisible(row)"
                             change.delegate="toggleVisibility(row, $event)"/>
                     </div>
-                    <div class="regions-table-col tags-icon"
-                        if.bind="row.type === 'tagset'">
-                        <img src.bind="getIconUrl('tags')" />
-                    </div>
-                    <div class="regions-table-col tags-icon"
-                        if.bind="row.type === 'tag'">
-                        <img src.bind="getIconUrl('tag')" />
+                    <!-- always rendered (even if empty) so columns line up
+                         across row types; only the icon itself is conditional -->
+                    <div class="regions-table-col tags-icon">
+                        <img src.bind="getIconUrl('tags')" if.bind="row.type === 'tagset'" />
+                        <img src.bind="getIconUrl('tag')" if.bind="row.type === 'tag'" />
                     </div>
                     <div class="regions-table-col tags-label">
                         <template if.bind="row.type === 'tagset' || row.type === 'tag'">
@@ -70,13 +80,13 @@
                                 (row.node.shape.Text || ('Shape ' + row.node.shape_id))}
                         </template>
                     </div>
-                    <div class="regions-table-col shape-z"
-                        if.bind="row.type === 'shape' && !row.node.missing">
-                        ${row.node.shape.TheZ !== -1 ? (row.node.shape.TheZ + 1) : ""}
+                    <div class="regions-table-col shape-c">
+                        ${row.type === 'shape' && !row.node.missing && row.node.shape.TheC !== -1 ?
+                            (row.node.shape.TheC + 1) : ""}
                     </div>
-                    <div class="regions-table-col shape-t"
-                        if.bind="row.type === 'shape' && !row.node.missing">
-                        ${row.node.shape.TheT !== -1 ? (row.node.shape.TheT + 1) : ""}
+                    <div class="regions-table-col shape-t">
+                        ${row.type === 'shape' && !row.node.missing && row.node.shape.TheT !== -1 ?
+                            (row.node.shape.TheT + 1) : ""}
                     </div>
                 </div>
             </template>

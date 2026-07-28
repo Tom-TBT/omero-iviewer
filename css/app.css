@@ -1149,6 +1149,39 @@ thumbnail-slider img {
     flex: 0 0 auto;
 }
 
+/* regions-tags (Tags sub-tab) */
+.tags-header-spacer {
+    float: left;
+    width: 77px;
+}
+.tree-indent {
+    flex: 0 0 auto;
+    text-align: left;
+}
+.tree-indent .tree-toggle {
+    cursor: pointer;
+}
+.tags-icon {
+    width: 20px;
+    flex: 0 0 auto;
+}
+.tags-icon img {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+.tags-label {
+    flex: 1 1 auto;
+    text-align: left;
+    padding-right: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tags-table-row {
+    cursor: pointer;
+}
+
 .rectangle-icon {
     background-image: url('images/rectangle.png');
 }
