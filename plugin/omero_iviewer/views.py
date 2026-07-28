@@ -34,7 +34,7 @@ from omeroweb.webgateway.templatetags.common_filters import lengthformat, \
 import json
 import omero_marshal
 import omero
-from omero.rtypes import rint, rlong, unwrap
+from omero.rtypes import rint, rlong, rstring, unwrap
 from omero_sys_ParametersI import ParametersI
 import omero.util.pixelstypetopython as pixelstypetopython
 from omeroweb.webclient.show import get_image_roi_id_for_shape
@@ -432,6 +432,80 @@ def plane_shape_counts(request, image_id, conn=None, **kwargs):
                 counts[the_z][the_t] += count
 
     return JsonResponse({'data': counts})
+
+
+TAGSET_NS = 'openmicroscopy.org/omero/insight/tagset'
+
+
+@login_required()
+def image_tags(request, image_id, conn=None, **kwargs):
+    """
+    Get Tag/Tagset annotations linked to the ROIs and Shapes of an Image.
+
+    Returns roi_tags/shape_tags as flat (id, ..., tag_id) lists plus the
+    tag and tagset metadata needed to group them, leaving tree assembly
+    to the client (which already holds the full Roi/Shape data).
+    """
+    query_service = conn.getQueryService()
+    params = omero.sys.ParametersI()
+    params.addId(image_id)
+
+    roi_tags = query_service.projection(
+        """
+        select roi.id, link.child.id from Roi roi
+        join roi.annotationLinks link
+        where roi.image.id = :id and link.child.class = TagAnnotation
+        """, params, conn.SERVICE_OPTS)
+    roi_tags = [[unwrap(v) for v in row] for row in roi_tags]
+
+    shape_tags = query_service.projection(
+        """
+        select shape.roi.id, shape.id, link.child.id from Shape shape
+        join shape.annotationLinks link
+        where shape.roi.image.id = :id and link.child.class = TagAnnotation
+        """, params, conn.SERVICE_OPTS)
+    shape_tags = [[unwrap(v) for v in row] for row in shape_tags]
+
+    tag_ids = set(row[1] for row in roi_tags) | set(
+        row[2] for row in shape_tags)
+
+    tags = {}
+    tagsets = {}
+    if len(tag_ids) > 0:
+        tag_params = omero.sys.ParametersI()
+        tag_params.addIds(list(tag_ids))
+
+        tag_rows = query_service.projection(
+            """
+            select tag.id, tag.textValue, tag.ns from TagAnnotation tag
+            where tag.id in (:ids)
+            """, tag_params, conn.SERVICE_OPTS)
+        for row in tag_rows:
+            tag_id, text, ns = (unwrap(v) for v in row)
+            tags[tag_id] = {
+                'id': tag_id, 'text': text, 'ns': ns, 'tagset_id': None
+            }
+
+        tagset_rows = query_service.projection(
+            """
+            select aal.child.id, aal.parent.id, aal.parent.textValue
+            from AnnotationAnnotationLink aal
+            where aal.child.id in (:ids) and aal.parent.class = TagAnnotation
+            and aal.parent.ns = :tagset_ns
+            """, tag_params.add('tagset_ns', rstring(TAGSET_NS)),
+            conn.SERVICE_OPTS)
+        for row in tagset_rows:
+            tag_id, tagset_id, tagset_text = (unwrap(v) for v in row)
+            if tag_id in tags:
+                tags[tag_id]['tagset_id'] = tagset_id
+            tagsets[tagset_id] = {'id': tagset_id, 'text': tagset_text}
+
+    return JsonResponse({
+        'roi_tags': roi_tags,
+        'shape_tags': shape_tags,
+        'tags': tags,
+        'tagsets': tagsets,
+    })
 
 
 def get_shape_info(conn, shape_id):
