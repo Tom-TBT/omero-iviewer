@@ -67,7 +67,6 @@ export default class RegionsTags {
     selected_roi_tabChanged(newVal, oldVal) {
         if (this.selected_roi_tab !== ROI_TABS.ROI_TAGS) return;
         if (!this.regions_info || !this.regions_info.ready) return;
-        this.registerObservers();
         if (this.tags_info === null) this.requestData();
         else this.buildTree();
     }
@@ -160,20 +159,14 @@ export default class RegionsTags {
      */
     unbind() {
         this.unregisterObservers();
-        if (this.regions_ready_observer) {
-            this.regions_ready_observer.dispose();
-            this.regions_ready_observer = null;
-        }
     }
 
     /**
-     * Registers the selected_shapes/visibility_toggles observers (once -
-     * a no-op if already registered for the current regions_info).
+     * Registers property observers
      *
      * @memberof RegionsTags
      */
     registerObservers() {
-        if (this.observers.length > 0 || this.regions_info === null) return;
         // deferred: flatten() reassigns this.rows, which makes the
         // repeat.for tear down/rebuild every row's DOM. Publishing a
         // visibility/selection change from one of our own checkboxes ends
@@ -192,45 +185,56 @@ export default class RegionsTags {
     }
 
     /**
-     * Disposes the selected_shapes/visibility_toggles observers.
+     * Unregisters the the observers (property and regions info ready)
      *
+     * @param {boolean} property_only true if only property observers are cleaned up
      * @memberof RegionsTags
      */
-    unregisterObservers() {
-        this.observers.forEach((o) => { if (o) o.dispose(); });
+    unregisterObservers(property_only = false) {
+        this.observers.map((o) => { if (o) o.dispose(); });
         this.observers = [];
-    }
-
-    /**
-     * Makes sure we (re)fetch/(re)build once regions_info.data is actually
-     * ready, whether that's already the case or happens shortly after
-     * (e.g. following an image switch).
-     *
-     * @memberof RegionsTags
-     */
-    waitForRegionsInfoReady() {
-        this.unregisterObservers();
+        if (property_only) return;
         if (this.regions_ready_observer) {
             this.regions_ready_observer.dispose();
             this.regions_ready_observer = null;
         }
+    }
+
+    /**
+     * Makes sure that regions info data is there before fetching/building
+     * this tab's tag tree
+     *
+     * @memberof RegionsTags
+     */
+    waitForRegionsInfoReady() {
         if (this.regions_info === null) return;
 
-        const onceReady = () => {
+        let onceReady = () => {
+            if (this.regions_info === null) return;
+            // register observer
             this.registerObservers();
             if (this.selected_roi_tab !== ROI_TABS.ROI_TAGS) return;
             if (this.tags_info === null) this.requestData(true);
             else this.buildTree();
         };
 
+        // tear down old observers
+        this.unregisterObservers();
         if (this.regions_info.ready) {
             onceReady();
             return;
         }
-        this.regions_ready_observer =
-            this.bindingEngine.propertyObserver(
-                this.regions_info, 'ready').subscribe(
-                    (newValue) => { if (newValue) onceReady(); });
+
+        // we are not yet ready, wait for ready via observer. Unlike
+        // regions-list.js's own version of this, we only act once ready
+        // actually becomes true: onceReady() here fetches/builds against
+        // regions_info.data, which is meaningless (or being cleared) while
+        // ready is false.
+        if (this.regions_ready_observer === null)
+            this.regions_ready_observer =
+                this.bindingEngine.propertyObserver(
+                    this.regions_info, 'ready').subscribe(
+                        (newValue, oldValue) => { if (newValue) onceReady(); });
     }
 
     /**
@@ -481,14 +485,9 @@ export default class RegionsTags {
         this.flatten();
     }
 
-    /**
-     * CSS class for a sortable column header, matching regions-list.html's
-     * sortable/asc/desc arrow convention.
-     * @param {String} attrName one of 'theC', 'theT', 'shapeText'
-     */
-    sortCss(attrName) {
-        if (attrName !== this.sortBy) return 'sortable';
-        return this.sortAscending ? 'sortable asc' : 'sortable desc';
+    sortCss(sortBy, sortAscending, attrName) {
+        if (attrName !== sortBy) return 'sortable';
+        return sortAscending ? 'sortable asc' : 'sortable desc';
     }
 
     /**

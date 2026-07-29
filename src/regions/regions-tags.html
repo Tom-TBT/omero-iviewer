@@ -31,11 +31,11 @@
             show.bind="!is_pending && tree !== null && rows.length > 0">
             <div class="regions-header tags-header">
                 <div class="tags-header-spacer"></div>
-                <div class="regions-table-col tags-label ${sortCss('shapeText')}"
+                <div class="regions-table-col tags-label ${sortCss(sortBy, sortAscending, 'shapeText')}"
                     click.delegate="sort('shapeText')">Comment</div>
-                <div class="regions-table-col shape-c ${sortCss('theC')}"
+                <div class="regions-table-col shape-c ${sortCss(sortBy, sortAscending, 'theC')}"
                     click.delegate="sort('theC')">C</div>
-                <div class="regions-table-col shape-t ${sortCss('theT')}"
+                <div class="regions-table-col shape-t ${sortCss(sortBy, sortAscending, 'theT')}"
                     click.delegate="sort('theT')">T</div>
             </div>
             <template repeat.for="row of rows">
