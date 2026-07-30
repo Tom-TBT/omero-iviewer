@@ -305,6 +305,54 @@ export default class RegionsTags {
     }
 
     /**
+     * Formats a marshalled owner (omero:details.owner, as returned for
+     * Tags/Tagsets by the image_tags view) the same way Shape owners are
+     * formatted in converters.js: "Firstname Lastname", falling back to
+     * the username if both are blank.
+     * @param {Object} owner
+     */
+    formatOwner(owner) {
+        if (!owner) return '';
+        let first = typeof owner.FirstName === 'string' ? owner.FirstName : '';
+        let last = typeof owner.LastName === 'string' ? owner.LastName : '';
+        let user = typeof owner.UserName === 'string' ? owner.UserName : '';
+        return (first === '' && last === '') ? user : (first + ' ' + last);
+    }
+
+    /**
+     * Tooltip text for a row, matching the "ROI: x, Shape: y\nOwner: ..."
+     * convention used in regions-list.html.
+     * @param {Object} row
+     */
+    rowTooltip(row) {
+        if (row.type === 'tagset') {
+            let owner = this.formatOwner(row.node.owner);
+            return 'Tagset: ' + row.node.id + (owner ? '\nOwner: ' + owner : '');
+        }
+        if (row.type === 'tag') {
+            let owner = this.formatOwner(row.node.owner);
+            return 'Tag: ' + row.node.id + (owner ? '\nOwner: ' + owner : '');
+        }
+        if (row.type === 'roi') {
+            if (row.node.missing) return 'ROI: ' + row.node.roi_id;
+            let shape = this.firstShape(row.node.roi);
+            let owner = shape ? shape.owner : '';
+            return 'ROI: ' + row.node.roi_id +
+                (owner ? '\nOwner: ' + owner : '');
+        }
+        if (row.type === 'shape') {
+            if (row.node.missing) {
+                return 'ROI: ' + row.node.roi_id +
+                    ', Shape: ' + row.node.shape_id;
+            }
+            let owner = row.node.shape.owner;
+            return 'ROI: ' + row.node.roi_id + ', Shape: ' + row.node.shape_id +
+                (owner ? '\nOwner: ' + owner : '');
+        }
+        return '';
+    }
+
+    /**
      * Builds the Tagset > Tag > Roi > Shape tree from tags_info (the flat
      * roi_tags/shape_tags/tags/tagsets response) and regions_info.data (the
      * live Roi/Shape objects, reused by reference so selection/visibility
@@ -350,7 +398,10 @@ export default class RegionsTags {
             const shapes = shapeEntries
                 .filter((e) => !roiIds.has(e.roi_id))
                 .map((e) => makeShapeRef(e.roi_id, e.shape_id));
-            return { id: tag_id, text: tag.text, show: true, rois, shapes };
+            return {
+                id: tag_id, text: tag.text, owner: tag.owner,
+                show: true, rois, shapes
+            };
         };
 
         // every tag id that is actually linked to something on this image
@@ -363,7 +414,10 @@ export default class RegionsTags {
             const tagset = tagsets[key];
             tagsetNodesById.set(
                 tagset.id,
-                { id: tagset.id, text: tagset.text, show: true, tags: [] });
+                {
+                    id: tagset.id, text: tagset.text, owner: tagset.owner,
+                    show: true, tags: []
+                });
         });
 
         const orphanTags = [];

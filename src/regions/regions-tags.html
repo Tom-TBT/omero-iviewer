@@ -88,6 +88,7 @@
             <template repeat.for="row of rows">
                 <div class="regions-table-row tags-table-row"
                     id="${'tag-tree-row-' + row.key}"
+                    title="${rowTooltip(row)}"
                     css="${row.type === 'shape' && !row.node.missing && row.node.shape.selected ?
                             'background-color: #d0d0ff;' : ''}"
                     click.delegate="selectRow(row, $event)">
@@ -123,6 +124,10 @@
                                     title="Show/Hide"
                                     checked.one-way="isRowVisible(row)"
                                     change.delegate="toggleVisibility(row, $event)"/>
+                                <span class="tags-show-count"
+                                    if.bind="row.type === 'roi' && !row.node.missing">
+                                    (${roiShapeCount(row.node.roi)})
+                                </span>
                             </span>
                             <span class="tags-show-right"
                                 if.bind="row.type === 'shape'">
@@ -149,15 +154,10 @@
                         </div>
                         <div class="regions-table-col tags-label"
                             show.bind="row.type === 'roi' || active_column === 'comments'">
-                            <template if.bind="row.type === 'roi'">
-                                ${row.node.missing ?
-                                    ('ROI ' + row.node.roi_id) :
-                                    (row.node.roi.name || ('ROI ' + row.node.roi_id))}
-                            </template>
                             <template if.bind="row.type === 'shape' && active_column === 'comments'">
                                 ${row.node.missing ?
                                     ('Shape ' + row.node.shape_id) :
-                                    (row.node.shape.Text || ('Shape ' + row.node.shape_id))}
+                                    (row.node.shape.Text ? row.node.shape.Text : '')}
                             </template>
                         </div>
                         <div class="regions-table-col shape-area"

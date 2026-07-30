@@ -1184,6 +1184,12 @@ thumbnail-slider img {
     display: flex;
     align-items: center;
 }
+.tags-show-left .tags-show-count {
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .tags-show-right .shape-type {
     height: 16px;
 }
