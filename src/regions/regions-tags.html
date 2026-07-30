@@ -147,7 +147,8 @@
                             ${row.type === 'shape' && !row.node.missing && row.node.shape.TheC !== -1 ?
                                 (row.node.shape.TheC + 1) : ""}
                         </div>
-                        <div class="regions-table-col tags-label">
+                        <div class="regions-table-col tags-label"
+                            show.bind="row.type === 'roi' || active_column === 'comments'">
                             <template if.bind="row.type === 'roi'">
                                 ${row.node.missing ?
                                     ('ROI ' + row.node.roi_id) :
