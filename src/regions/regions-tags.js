@@ -22,6 +22,13 @@ import { REGIONS_SET_PROPERTY } from '../events/events';
 import { inject, customElement, bindable, BindingEngine } from 'aurelia-framework';
 
 /**
+ * Indent (px) of a Roi row's tree-toggle, depending on the Roi's ancestry.
+ */
+const ROI_INDENT_UNDER_TAGSET = 45;
+const ROI_INDENT_UNDER_ORPHAN_TAG = 32;
+const ROI_INDENT_ORPHAN = 0;
+
+/**
  * Represents the regions tags sub-tab in the right hand panel.
  *
  * Reorganizes the Rois/Shapes already held by regions_info.data by the Tags
@@ -401,12 +408,17 @@ export default class RegionsTags {
     /**
      * Depth (indent level) is fixed per role in the conceptual
      * Tagset(0) > Tag(1) > Roi(2) > Shape(3) hierarchy, regardless of which
-     * ancestors actually exist on a given branch (e.g. an orphan Roi is
-     * still indented as a Roi, not as if it were a Tagset) - the arrow's
-     * own padding-left uses this, within a single fixed-width "Show" column
+     * ancestors actually exist on a given branch - the arrow's own
+     * padding-left uses this, within a single fixed-width "Show" column
      * (see .tags-show in app.css). A Shape directly tagged (not nested in a
      * Roi) sits at the Roi depth, since it's a sibling of Roi nodes under
      * the same Tag.
+     *
+     * A Roi row's indent (px) is the one exception: it varies with the
+     * Roi's actual ancestry rather than a fixed depth, so a Roi reads as
+     * more/less nested depending on whether it sits under a Tagset, an
+     * orphan Tag, or is itself a top-level orphan Roi (see the
+     * ROI_INDENT_* constants above the class).
      */
 
     /**
@@ -442,12 +454,14 @@ export default class RegionsTags {
      *   it's allowed to vary with the Tag's actual ancestry: an orphan Tag
      *   should read as top-level, not as if it were nested under whichever
      *   Tagset happens to be listed above it
+     * @param {Number} roiIndent indent (px) to use for this Tag's Roi rows
      */
-    addTagRows(rows, tag, depth) {
+    addTagRows(rows, tag, depth, roiIndent) {
         rows.push({ type: 'tag', depth, key: 'tag-' + tag.id, node: tag });
         if (!tag.show) return;
         tag.rois.forEach((roiNode) => this.addRoiRows(
-            rows, roiNode, 'tagroi-' + tag.id + '-' + roiNode.roi_id));
+            rows, roiNode, 'tagroi-' + tag.id + '-' + roiNode.roi_id,
+            roiIndent));
         this.sortShapeRefs(tag.shapes, (e) => e.shape).forEach((shapeRef) => {
             rows.push({
                 type: 'shape', depth: 2,
@@ -464,8 +478,9 @@ export default class RegionsTags {
      * @param {Array.<Object>} rows
      * @param {Object} roiNode
      * @param {String} roiKey
+     * @param {Number} indent indent (px) for this Roi row's tree-toggle
      */
-    addRoiRows(rows, roiNode, roiKey) {
+    addRoiRows(rows, roiNode, roiKey, indent) {
         const shape = !roiNode.missing && this.roiShapeCount(roiNode.roi) === 1 ?
             this.firstShape(roiNode.roi) : null;
         if (shape) {
@@ -477,7 +492,7 @@ export default class RegionsTags {
             });
             return;
         }
-        rows.push({ type: 'roi', depth: 2, key: roiKey, node: roiNode });
+        rows.push({ type: 'roi', indent, key: roiKey, node: roiNode });
         if (roiNode.show && roiNode.roi &&
             roiNode.roi.shapes instanceof Map) {
             const shapes = this.sortShapeRefs(
@@ -610,15 +625,18 @@ export default class RegionsTags {
                 node: tagset
             });
             if (tagset.show) {
-                tagset.tags.forEach((tag) => this.addTagRows(rows, tag, 1));
+                tagset.tags.forEach((tag) => this.addTagRows(
+                    rows, tag, 1, ROI_INDENT_UNDER_TAGSET));
             }
         });
 
-        this.tree.orphanTags.forEach((tag) => this.addTagRows(rows, tag, 0));
+        this.tree.orphanTags.forEach((tag) => this.addTagRows(
+            rows, tag, 0, ROI_INDENT_UNDER_ORPHAN_TAG));
 
         this.tree.orphanRois.forEach(
             (roiNode) => this.addRoiRows(
-                rows, roiNode, 'orphanroi-' + roiNode.roi_id));
+                rows, roiNode, 'orphanroi-' + roiNode.roi_id,
+                ROI_INDENT_ORPHAN));
 
         this.rows = rows;
     }

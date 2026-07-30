@@ -114,7 +114,7 @@
                             <span class="tags-show-left">
                                 <span class="tree-toggle"
                                     if.bind="row.type !== 'shape'"
-                                    css="padding-left: ${row.depth * 16}px;"
+                                    css="padding-left: ${row.indent}px;"
                                     click.delegate="toggleNode(row.node, $event)">
                                     ${row.node.show ? '&#9660;' : '&#9658;'}
                                 </span>
