@@ -396,7 +396,13 @@ export default class RegionsTags {
 
         const makeRoiNode = (roi_id) => {
             const roi = data instanceof Map ? data.get(roi_id) : undefined;
-            return { roi_id, roi: roi || null, missing: !roi, show: false };
+            const node = {
+                roi_id, roi: roi || null, missing: !roi, show: false,
+                visible: true
+            };
+            node.visible = this.collectShapes({ type: 'roi', node })
+                .every((s) => s.visible);
+            return node;
         };
         const makeShapeRef = (roi_id, shape_id) => {
             const roi = data instanceof Map ? data.get(roi_id) : undefined;
@@ -416,10 +422,13 @@ export default class RegionsTags {
             const shapes = shapeEntries
                 .filter((e) => !roiIds.has(e.roi_id))
                 .map((e) => makeShapeRef(e.roi_id, e.shape_id));
-            return {
+            const node = {
                 id: tag_id, text: tag.text, owner: tag.owner,
-                show: true, rois, shapes
+                show: true, rois, shapes, visible: true
             };
+            node.visible = this.collectShapes({ type: 'tag', node })
+                .every((s) => s.visible);
+            return node;
         };
 
         // every tag id that is actually linked to something on this image
@@ -453,6 +462,11 @@ export default class RegionsTags {
             const node = tagsetNodesById.get(tagsets[key].id);
             if (node.tags.length > 0) tagsets_ordered.push(node);
         });
+        // computed once all of a Tagset's Tags have been assigned above
+        tagsets_ordered.forEach((node) => {
+            node.visible = this.collectShapes({ type: 'tagset', node })
+                .every((s) => s.visible);
+        });
 
         // Rois with zero tag links at all (neither the Roi itself, nor any
         // of its Shapes) - shown last, same as a normal Roi entry.
@@ -465,8 +479,13 @@ export default class RegionsTags {
         if (data instanceof Map) {
             data.forEach((roi, roi_id) => {
                 if (!taggedRoiIds.has(roi_id)) {
-                    orphanRois.push(
-                        { roi_id, roi, missing: false, show: false });
+                    const node = {
+                        roi_id, roi, missing: false, show: false,
+                        visible: true
+                    };
+                    node.visible = this.collectShapes({ type: 'roi', node })
+                        .every((s) => s.visible);
+                    orphanRois.push(node);
                 }
             });
         }
@@ -758,17 +777,33 @@ export default class RegionsTags {
     }
 
     /**
-     * Whether every Shape under a row is currently visible, used to drive
-     * the row's visibility checkbox (no indeterminate/tri-state in v1).
+     * Whether a row's visibility checkbox should show as checked.
+     *
+     * A leaf Shape row reflects the actual, live Shape.visible - there is
+     * only one Shape object, so no ambiguity. A Roi/Tag/Tagset row instead
+     * reflects a flag stored on that row's own node (initialized in
+     * buildTree(), updated in toggleVisibility() below) rather than a live
+     * "every descendant Shape visible" check: a Roi/Shape can appear under
+     * more than one Tag, and Shape.visible is shared/global, so a live
+     * check would make toggling one Tag's checkbox retroactively flip a
+     * different Tag's checkbox (or a Tagset's) just because they happen to
+     * share that Roi/Shape. The stored flag keeps a toggle scoped to the
+     * row clicked and its own descendants, per the user's request.
      *
      * @param {Object} row a row, as produced by flatten()
      */
     isRowVisible(row) {
-        return this.collectShapes(row).every((s) => s.visible);
+        if (row.type === 'shape') {
+            return this.collectShapes(row).every((s) => s.visible);
+        }
+        return !!row.node.visible;
     }
 
     /**
-     * Batch-toggles the visibility of every Shape under a row.
+     * Batch-toggles the visibility of every Shape under a row, and updates
+     * the row's own (and its descendant Roi/Tag nodes') stored visible
+     * flag - never an ancestor's, and never a different branch's, even if
+     * it happens to share a Roi/Shape with this one (see isRowVisible).
      *
      * @param {Object} row a row, as produced by flatten()
      * @param {Object} event the mouse event object
@@ -779,6 +814,7 @@ export default class RegionsTags {
         const shape_ids = this.collectShapes(row)
             .filter((s) => s.visible !== checked)
             .map((s) => s.shape_id);
+        this.setNodeVisible(row, checked);
         if (shape_ids.length === 0) return true;
         this.context.publish(
             REGIONS_SET_PROPERTY, {
@@ -788,6 +824,28 @@ export default class RegionsTags {
                 value: checked
             });
         return true;
+    }
+
+    /**
+     * Sets the stored visible flag (see isRowVisible) on a Roi/Tag/Tagset
+     * row and, recursively, on its own descendant Roi/Tag nodes only.
+     *
+     * @param {Object} row a row, as produced by flatten()
+     * @param {Boolean} checked
+     */
+    setNodeVisible(row, checked) {
+        if (row.type === 'tagset') {
+            row.node.visible = checked;
+            row.node.tags.forEach((tag) => {
+                tag.visible = checked;
+                tag.rois.forEach((roiNode) => { roiNode.visible = checked; });
+            });
+        } else if (row.type === 'tag') {
+            row.node.visible = checked;
+            row.node.rois.forEach((roiNode) => { roiNode.visible = checked; });
+        } else if (row.type === 'roi') {
+            row.node.visible = checked;
+        }
     }
 
     /**
