@@ -170,7 +170,7 @@ span.sp-thumb-el {
 .sp-thumb-el .sp-thumb-el {
     position: absolute;
     left: 52px;
-    margin: -1px; 
+    margin: -1px;
 }
 .sp-palette .sp-thumb-active .sp-thumb-el .sp-thumb-inner {
     background-image: none;
@@ -1154,8 +1154,14 @@ thumbnail-slider img {
     flex: 0 0 auto;
     width: 110px;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
+}
+.tags-header .tags-show {
+    justify-content: flex-start;
+}
+.tags-header .tags-show label {
+    margin-left: 4px;
 }
 .tags-show-left {
     display: flex;
@@ -1184,10 +1190,15 @@ thumbnail-slider img {
 .tags-label {
     flex: 1 1 auto;
     text-align: left;
+    padding-left: 8px;
     padding-right: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.tags-table .shape-area,
+.tags-table .shape-length {
+    padding-left: 8px;
 }
 .tags-category {
     flex: 1 1 auto;

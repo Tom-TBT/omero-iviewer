@@ -53,14 +53,14 @@
                     </ul>
                 </div>
                 <div class="regions-table-col tags-show">
-                    <label for="tags_shapes_visibility_toggler"
-                            show.bind="regions_info.number_of_shapes > 0">Show</label>
                     <input id="tags_shapes_visibility_toggler"
                             title="Show/Hide all"
                             checked.one-way="regions_info.visibility_toggles === 0"
                             show.bind="regions_info.number_of_shapes > 0"
                             change.delegate="toggleAllShapesVisibility($event)"
                             type="checkbox" />
+                    <label for="tags_shapes_visibility_toggler"
+                            show.bind="regions_info.number_of_shapes > 0">Show</label>
                 </div>
                 <div class="regions-table-col shape-z ${sortCss(sortBy, sortAscending, 'theZ')}"
                     click.delegate="sort('theZ')">Z</div>
