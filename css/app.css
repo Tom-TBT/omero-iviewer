@@ -1150,24 +1150,25 @@ thumbnail-slider img {
 }
 
 /* regions-tags (Tags sub-tab) */
-.tags-header-spacer {
-    float: left;
-    width: 77px;
-}
-.tree-indent {
+.tags-show {
     flex: 0 0 auto;
-    text-align: left;
+    width: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.tree-indent .tree-toggle {
+.tags-show-left {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+.tags-show .tree-toggle {
     cursor: pointer;
 }
-.tags-icon {
-    width: 20px;
-    flex: 0 0 auto;
-}
-.tags-icon img {
+.tags-show-left img {
     width: 16px;
     height: 16px;
+    margin-left: 4px;
     vertical-align: middle;
 }
 .tags-label {

@@ -132,6 +132,13 @@ export default class RegionsTags {
     sortAscending = true;
 
     /**
+     * the column shown alongside Z/T/C (mutually exclusive for now)
+     * @memberof RegionsTags
+     * @type {string}
+     */
+    active_column = 'comments';
+
+    /**
      * @constructor
      * @param {Context} context the application context (injected)
      * @param {BindingEngine} bindingEngine the BindingEngine (injected)
@@ -373,37 +380,52 @@ export default class RegionsTags {
     }
 
     /**
+     * Depth (indent level) is fixed per role in the conceptual
+     * Tagset(0) > Tag(1) > Roi(2) > Shape(3) hierarchy, regardless of which
+     * ancestors actually exist on a given branch (e.g. an orphan Roi is
+     * still indented as a Roi, not as if it were a Tagset) - the arrow's
+     * own padding-left uses this, within a single fixed-width "Show" column
+     * (see .tags-show in app.css). A Shape directly tagged (not nested in a
+     * Roi) sits at the Roi depth, since it's a sibling of Roi nodes under
+     * the same Tag.
+     */
+
+    /**
+     * Number of (non-deleted) Shapes a Roi has.
+     * @param {Object} roi a live Roi object from regions_info.data
+     * @return {Number}
+     */
+    roiShapeCount(roi) {
+        if (!roi || !(roi.shapes instanceof Map)) return 0;
+        return roi.shapes.size - (roi.deleted || 0);
+    }
+
+    /**
+     * The first non-deleted Shape of a Roi, or null.
+     * @param {Object} roi a live Roi object from regions_info.data
+     */
+    firstShape(roi) {
+        if (!roi || !(roi.shapes instanceof Map)) return null;
+        for (const shape of roi.shapes.values()) {
+            if (!shape.deleted) return shape;
+        }
+        return null;
+    }
+
+    /**
      * Adds the rows for a Tag node (and, if expanded, its Roi/Shape
      * children) to the given rows array.
      * @param {Array.<Object>} rows
      * @param {Object} tag
-     * @param {Number} depth
      */
-    addTagRows(rows, tag, depth) {
-        rows.push({ type: 'tag', depth, key: 'tag-' + tag.id, node: tag });
+    addTagRows(rows, tag) {
+        rows.push({ type: 'tag', depth: 1, key: 'tag-' + tag.id, node: tag });
         if (!tag.show) return;
-        tag.rois.forEach((roiNode) => {
-            const roiKey = 'tagroi-' + tag.id + '-' + roiNode.roi_id;
-            rows.push({
-                type: 'roi', depth: depth + 1, key: roiKey, node: roiNode
-            });
-            if (roiNode.show && roiNode.roi &&
-                roiNode.roi.shapes instanceof Map) {
-                const shapes = this.sortShapeRefs(
-                    Array.from(roiNode.roi.shapes.values()), (s) => s);
-                shapes.forEach((shape) => {
-                    const shape_id = shape['@id'];
-                    rows.push({
-                        type: 'shape', depth: depth + 2,
-                        key: roiKey + '-shape-' + shape_id,
-                        node: { shape, roi_id: roiNode.roi_id, shape_id }
-                    });
-                });
-            }
-        });
+        tag.rois.forEach((roiNode) => this.addRoiRows(
+            rows, roiNode, 'tagroi-' + tag.id + '-' + roiNode.roi_id));
         this.sortShapeRefs(tag.shapes, (e) => e.shape).forEach((shapeRef) => {
             rows.push({
-                type: 'shape', depth: depth + 1,
+                type: 'shape', depth: 2,
                 key: 'tagshape-' + tag.id + '-' + shapeRef.shape_id,
                 node: shapeRef
             });
@@ -411,15 +433,26 @@ export default class RegionsTags {
     }
 
     /**
-     * Adds the rows for an (orphan) Roi node (and, if expanded, its Shapes)
-     * to the given rows array.
+     * Adds the rows for a Roi node (and, if expanded, its Shapes) to the
+     * given rows array. A Roi with exactly one (non-deleted) Shape shows
+     * that Shape's row directly instead, matching the ROIs tab.
      * @param {Array.<Object>} rows
      * @param {Object} roiNode
-     * @param {Number} depth
+     * @param {String} roiKey
      */
-    addRoiRows(rows, roiNode, depth) {
-        const roiKey = 'orphanroi-' + roiNode.roi_id;
-        rows.push({ type: 'roi', depth, key: roiKey, node: roiNode });
+    addRoiRows(rows, roiNode, roiKey) {
+        const shape = !roiNode.missing && this.roiShapeCount(roiNode.roi) === 1 ?
+            this.firstShape(roiNode.roi) : null;
+        if (shape) {
+            rows.push({
+                type: 'shape', depth: 2, key: roiKey + '-onlyshape',
+                node: {
+                    shape, roi_id: roiNode.roi_id, shape_id: shape['@id']
+                }
+            });
+            return;
+        }
+        rows.push({ type: 'roi', depth: 2, key: roiKey, node: roiNode });
         if (roiNode.show && roiNode.roi &&
             roiNode.roi.shapes instanceof Map) {
             const shapes = this.sortShapeRefs(
@@ -427,7 +460,7 @@ export default class RegionsTags {
             shapes.forEach((shape) => {
                 const shape_id = shape['@id'];
                 rows.push({
-                    type: 'shape', depth: depth + 1,
+                    type: 'shape', depth: 3,
                     key: roiKey + '-shape-' + shape_id,
                     node: { shape, roi_id: roiNode.roi_id, shape_id }
                 });
@@ -446,8 +479,11 @@ export default class RegionsTags {
     shapeSortValue(shape) {
         if (!shape) return undefined;
         if (this.sortBy === 'shapeText') return (shape.Text || '').toLowerCase();
-        const attr = this.sortBy === 'theC' ? 'TheC' : 'TheT';
-        const value = shape[attr];
+        const attrMap = {
+            theZ: 'TheZ', theT: 'TheT', theC: 'TheC',
+            area: 'Area', length: 'Length'
+        };
+        const value = shape[attrMap[this.sortBy]];
         return value === -1 ? undefined : value;
     }
 
@@ -491,6 +527,47 @@ export default class RegionsTags {
     }
 
     /**
+     * Show/Hide all shapes in the image (not just the ones shown in this
+     * tab's tree)
+     *
+     * @param {Object} event the mouse event object
+     * @memberof RegionsTags
+     */
+    toggleAllShapesVisibility(event) {
+        event.stopPropagation();
+        let show = event.target.checked;
+        if (this.regions_info.number_of_shapes === 0) return;
+        let ids = [];
+        this.regions_info.data.forEach(
+            (roi) =>
+                roi.shapes.forEach(
+                    (shape) => {
+                        if (shape.visible !== show &&
+                            !(shape.deleted &&
+                            typeof shape.is_new === 'boolean' && shape.is_new))
+                                ids.push(shape.shape_id);
+                    })
+        );
+        this.context.publish(
+           REGIONS_SET_PROPERTY, {
+               config_id: this.regions_info.image_info.config_id,
+               property : "visible",
+               shapes : ids, value : show});
+    }
+
+    /**
+     * Selects column (mutually exclusive for now)
+     *
+     * @param {string} which the column name
+     * @memberof RegionsTags
+     */
+    showColumn(which) {
+        if (typeof which !== 'string' || which.length === 0 ||
+            which === this.active_column) return;
+        this.active_column = which;
+    }
+
+    /**
      * Recomputes this.rows (the visible, flattened rows) from this.tree,
      * honoring each node's show/collapsed state. Called after building the
      * tree and after any node is expanded/collapsed.
@@ -508,14 +585,15 @@ export default class RegionsTags {
                 node: tagset
             });
             if (tagset.show) {
-                tagset.tags.forEach((tag) => this.addTagRows(rows, tag, 1));
+                tagset.tags.forEach((tag) => this.addTagRows(rows, tag));
             }
         });
 
-        this.tree.orphanTags.forEach((tag) => this.addTagRows(rows, tag, 0));
+        this.tree.orphanTags.forEach((tag) => this.addTagRows(rows, tag));
 
         this.tree.orphanRois.forEach(
-            (roiNode) => this.addRoiRows(rows, roiNode, 0));
+            (roiNode) => this.addRoiRows(
+                rows, roiNode, 'orphanroi-' + roiNode.roi_id));
 
         this.rows = rows;
     }
