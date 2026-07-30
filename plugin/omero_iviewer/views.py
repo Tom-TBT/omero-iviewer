@@ -500,6 +500,29 @@ def image_tags(request, image_id, conn=None, **kwargs):
                 tags[tag_id]['tagset_id'] = tagset_id
             tagsets[tagset_id] = {'id': tagset_id, 'text': tagset_text}
 
+        # Owner info: fetch+marshal the actual TagAnnotation objects (same
+        # findAllByQuery + omero_marshal.get_encoder approach as
+        # rois_by_plane above) rather than hand-picking Experimenter
+        # fields via HQL, so the owner dict has the same shape the
+        # frontend already knows how to read off Shapes
+        # (omero:details.owner.FirstName/LastName/UserName).
+        annotation_ids = set(tags.keys()) | set(tagsets.keys())
+        annotation_params = omero.sys.ParametersI()
+        annotation_params.addIds(list(annotation_ids))
+        annotations = query_service.findAllByQuery(
+            "select a from TagAnnotation a where a.id in (:ids)",
+            annotation_params, conn.SERVICE_OPTS)
+        for a in annotations:
+            encoder = omero_marshal.get_encoder(a.__class__)
+            if encoder is None:
+                continue
+            owner = encoder.encode(a).get('omero:details', {}).get('owner')
+            a_id = unwrap(a.getId())
+            if a_id in tags:
+                tags[a_id]['owner'] = owner
+            if a_id in tagsets:
+                tagsets[a_id]['owner'] = owner
+
     return JsonResponse({
         'roi_tags': roi_tags,
         'shape_tags': shape_tags,

@@ -196,6 +196,16 @@ export default class RegionsTags {
             this.bindingEngine.propertyObserver(
                 this.regions_info, 'visibility_toggles')
                 .subscribe(deferredFlatten));
+        // number_of_shapes changes whenever a Roi/Shape is drawn or
+        // (un)deleted (regions-drawing.js/regions_info.js) - unlike
+        // visibility/selection, this can add/remove an (orphan) Roi or
+        // Shape the tree doesn't know about yet, so re-derive the tree
+        // itself from tags_info + regions_info.data, not just re-flatten
+        // the existing one.
+        this.observers.push(
+            this.bindingEngine.propertyObserver(
+                this.regions_info, 'number_of_shapes')
+                .subscribe(() => setTimeout(() => this.buildTree(), 0)));
     }
 
     /**
