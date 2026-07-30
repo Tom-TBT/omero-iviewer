@@ -91,30 +91,40 @@
                     css="${row.type === 'shape' && !row.node.missing && row.node.shape.selected ?
                             'background-color: #d0d0ff;' : ''}"
                     click.delegate="selectRow(row, $event)">
-                    <div class="regions-table-col tags-show">
-                        <span class="tags-show-left">
-                            <span class="tree-toggle"
-                                if.bind="row.type !== 'shape'"
-                                css="padding-left: ${row.depth * 16}px;"
-                                click.delegate="toggleNode(row.node, $event)">
-                                ${row.node.show ? '&#9660;' : '&#9658;'}
-                            </span>
-                            <img src.bind="getIconUrl('tags')" if.bind="row.type === 'tagset'" />
-                            <img src.bind="getIconUrl('tag')" if.bind="row.type === 'tag'" />
+                    <!-- Tagset/Tag rows are category blocks, not data rows:
+                         one fused, left-justified cell (arrow, icon,
+                         checkbox, name all touching), no Z/T/C/etc -->
+                    <div class="regions-table-col tags-category"
+                        if.bind="row.type === 'tagset' || row.type === 'tag'">
+                        <span class="tree-toggle"
+                            css="padding-left: ${row.depth * 16}px;"
+                            click.delegate="toggleNode(row.node, $event)">
+                            ${row.node.show ? '&#9660;' : '&#9658;'}
                         </span>
+                        <img src.bind="getIconUrl('tags')" if.bind="row.type === 'tagset'" />
+                        <img src.bind="getIconUrl('tag')" if.bind="row.type === 'tag'" />
                         <input type="checkbox"
-                            if.bind="!row.node.missing"
                             title="Show/Hide"
                             checked.one-way="isRowVisible(row)"
                             change.delegate="toggleVisibility(row, $event)"/>
-                    </div>
-                    <!-- Tagset/Tag rows are category blocks, not data rows:
-                         one label filling the rest of the row, no Z/T/C/etc -->
-                    <div class="regions-table-col tags-label"
-                        if.bind="row.type === 'tagset' || row.type === 'tag'">
-                        ${row.node.text}
+                        <span class="tags-category-text">${row.node.text}</span>
                     </div>
                     <template if.bind="row.type === 'roi' || row.type === 'shape'">
+                        <div class="regions-table-col tags-show">
+                            <span class="tags-show-left">
+                                <span class="tree-toggle"
+                                    if.bind="row.type !== 'shape'"
+                                    css="padding-left: ${row.depth * 16}px;"
+                                    click.delegate="toggleNode(row.node, $event)">
+                                    ${row.node.show ? '&#9660;' : '&#9658;'}
+                                </span>
+                            </span>
+                            <input type="checkbox"
+                                if.bind="!row.node.missing"
+                                title="Show/Hide"
+                                checked.one-way="isRowVisible(row)"
+                                change.delegate="toggleVisibility(row, $event)"/>
+                        </div>
                         <div class="regions-table-col shape-z">
                             ${row.type === 'shape' && !row.node.missing && row.node.shape.TheZ !== -1 ?
                                 (row.node.shape.TheZ + 1) : ""}

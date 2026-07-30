@@ -417,9 +417,15 @@ export default class RegionsTags {
      * children) to the given rows array.
      * @param {Array.<Object>} rows
      * @param {Object} tag
+     * @param {Number} depth 1 if under a Tagset, 0 if an orphan Tag - a
+     *   Tag row's depth is purely a visual nesting cue (unlike Roi/Shape
+     *   depths, it doesn't need to line up with any Z/T/C/... columns), so
+     *   it's allowed to vary with the Tag's actual ancestry: an orphan Tag
+     *   should read as top-level, not as if it were nested under whichever
+     *   Tagset happens to be listed above it
      */
-    addTagRows(rows, tag) {
-        rows.push({ type: 'tag', depth: 1, key: 'tag-' + tag.id, node: tag });
+    addTagRows(rows, tag, depth) {
+        rows.push({ type: 'tag', depth, key: 'tag-' + tag.id, node: tag });
         if (!tag.show) return;
         tag.rois.forEach((roiNode) => this.addRoiRows(
             rows, roiNode, 'tagroi-' + tag.id + '-' + roiNode.roi_id));
@@ -585,11 +591,11 @@ export default class RegionsTags {
                 node: tagset
             });
             if (tagset.show) {
-                tagset.tags.forEach((tag) => this.addTagRows(rows, tag));
+                tagset.tags.forEach((tag) => this.addTagRows(rows, tag, 1));
             }
         });
 
-        this.tree.orphanTags.forEach((tag) => this.addTagRows(rows, tag));
+        this.tree.orphanTags.forEach((tag) => this.addTagRows(rows, tag, 0));
 
         this.tree.orphanRois.forEach(
             (roiNode) => this.addRoiRows(

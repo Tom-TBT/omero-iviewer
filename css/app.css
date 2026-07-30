@@ -1179,6 +1179,31 @@ thumbnail-slider img {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.tags-category {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    text-align: left;
+}
+.tags-category .tree-toggle {
+    cursor: pointer;
+}
+.tags-category img {
+    width: 16px;
+    height: 16px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.tags-category input[type="checkbox"] {
+    margin-left: 4px;
+}
+.tags-category-text {
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .tags-table-row {
     cursor: pointer;
 }
