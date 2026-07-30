@@ -1165,6 +1165,9 @@ thumbnail-slider img {
 .tags-show .tree-toggle {
     cursor: pointer;
 }
+.tags-show-left input[type="checkbox"] {
+    margin-left: 4px;
+}
 .tags-show-left img {
     width: 16px;
     height: 16px;

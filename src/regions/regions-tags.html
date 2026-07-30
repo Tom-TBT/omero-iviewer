@@ -118,15 +118,21 @@
                                     click.delegate="toggleNode(row.node, $event)">
                                     ${row.node.show ? '&#9660;' : '&#9658;'}
                                 </span>
+                                <input type="checkbox"
+                                    if.bind="row.type !== 'shape' && !row.node.missing"
+                                    title="Show/Hide"
+                                    checked.one-way="isRowVisible(row)"
+                                    change.delegate="toggleVisibility(row, $event)"/>
                             </span>
-                            <span class="tags-show-right">
+                            <span class="tags-show-right"
+                                if.bind="row.type === 'shape'">
                                 <input type="checkbox"
                                     if.bind="!row.node.missing"
                                     title="Show/Hide"
                                     checked.one-way="isRowVisible(row)"
                                     change.delegate="toggleVisibility(row, $event)"/>
                                 <span class="shape-type ${shapeIconClass(row)}"
-                                    if.bind="row.type === 'shape' && !row.node.missing"></span>
+                                    if.bind="!row.node.missing"></span>
                             </span>
                         </div>
                         <div class="regions-table-col shape-z">
