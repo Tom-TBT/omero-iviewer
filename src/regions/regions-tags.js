@@ -679,11 +679,36 @@ export default class RegionsTags {
                                 ids.push(shape.shape_id);
                     })
         );
+        // unlike a single row's own toggleVisibility (scoped to that row
+        // and its descendants only, see isRowVisible), this is a global
+        // action affecting every Shape in the image, so every Tagset/Tag/
+        // Roi's stored visible flag should follow suit too
+        this.setAllNodesVisible(show);
         this.context.publish(
            REGIONS_SET_PROPERTY, {
                config_id: this.regions_info.image_info.config_id,
                property : "visible",
                shapes : ids, value : show});
+    }
+
+    /**
+     * Sets the stored visible flag (see isRowVisible) on every Tagset/Tag/
+     * Roi node in the current tree, for the global Show/Hide-all toggle.
+     *
+     * @param {Boolean} show
+     */
+    setAllNodesVisible(show) {
+        if (this.tree === null) return;
+        const setTagVisible = (tag) => {
+            tag.visible = show;
+            tag.rois.forEach((roiNode) => { roiNode.visible = show; });
+        };
+        this.tree.tagsets.forEach((tagset) => {
+            tagset.visible = show;
+            tagset.tags.forEach(setTagVisible);
+        });
+        this.tree.orphanTags.forEach(setTagVisible);
+        this.tree.orphanRois.forEach((roiNode) => { roiNode.visible = show; });
     }
 
     /**
