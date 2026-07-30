@@ -17,6 +17,7 @@
 //
 
 import Context from '../app/context';
+import Misc from '../utils/misc';
 import { IVIEWER, ROI_TABS, WEBCLIENT } from '../utils/constants';
 import { REGIONS_SET_PROPERTY } from '../events/events';
 import { inject, customElement, bindable, BindingEngine } from 'aurelia-framework';
@@ -144,6 +145,13 @@ export default class RegionsTags {
      * @type {string}
      */
     active_column = 'comments';
+
+    /**
+     * The key of the last row clicked in selectRow(), used as the anchor
+     * for shift-click range selection.
+     * @type {String}
+     */
+    last_selected_row_key = null;
 
     /**
      * @constructor
@@ -783,10 +791,15 @@ export default class RegionsTags {
     }
 
     /**
-     * Selects a Roi or Shape row, syncing selection/highlight with the
-     * viewer and the ROIs tab. Mirrors selectShape() in regions-list.js,
-     * simplified for this read-only navigation tab: single-select only,
-     * always replacing the prior selection (no ctrl/shift multi-select).
+     * Selects a row, syncing selection/highlight with the viewer and the
+     * ROIs tab. Mirrors selectShape() in regions-list.js: ctrl/cmd adds to
+     * (or, if already fully selected, removes from) the current selection;
+     * shift selects the range between the last-clicked row and this one.
+     * Unlike regions-list.js (which has no ordered array of its own and
+     * has to walk the DOM to find that range), this tab already keeps
+     * this.rows in display order, so the range is just an index slice.
+     * A Tag/Tagset row selects every Shape beneath it (via collectShapes),
+     * same as a multi-Shape Roi row does.
      *
      * @param {Object} row a row, as produced by flatten()
      * @param {Object} event the mouse event object
@@ -798,34 +811,56 @@ export default class RegionsTags {
         // checkbox's native toggle before it can fire its own change event
         if (event.target.tagName.toUpperCase() === 'INPUT') return true;
 
-        let shape_ids;
-        if (row.type === 'roi') {
-            if (row.node.missing || !(row.node.roi.shapes instanceof Map)) {
-                return;
-            }
-            shape_ids = Array.from(row.node.roi.shapes.values())
-                .map((s) => s.shape_id);
-            // expand, so the newly-selected shapes are visible right away
-            if (!row.node.show) {
-                row.node.show = true;
-                this.flatten();
-            }
-        } else if (row.type === 'shape') {
-            if (row.node.missing) return;
-            shape_ids = [row.node.shape.shape_id];
-        } else {
-            return;
+        // expand a collapsed Roi, so the newly-selected Shapes are visible
+        if (row.type === 'roi' && !row.node.missing && !row.node.show) {
+            row.node.show = true;
+            this.flatten();
         }
-        if (shape_ids.length === 0) return;
+
+        let cmdKey = Misc.isApple() ? 'metaKey' : 'ctrlKey';
+        let ctrl = typeof event[cmdKey] === 'boolean' && event[cmdKey];
+        let shift = event.shiftKey;
+        let multipleSelection = ctrl;
+
+        let shapes;
+        if (shift && this.last_selected_row_key !== null) {
+            let startIdx = this.rows.findIndex(
+                (r) => r.key === this.last_selected_row_key);
+            let endIdx = this.rows.findIndex((r) => r.key === row.key);
+            if (startIdx !== -1 && endIdx !== -1) {
+                let lo = Math.min(startIdx, endIdx);
+                let hi = Math.max(startIdx, endIdx);
+                shapes = [];
+                const seen = new Set();
+                for (let i = lo; i <= hi; i++) {
+                    this.collectShapes(this.rows[i]).forEach((s) => {
+                        if (!seen.has(s.shape_id)) {
+                            seen.add(s.shape_id);
+                            shapes.push(s);
+                        }
+                    });
+                }
+            }
+        }
+        if (typeof shapes === 'undefined') shapes = this.collectShapes(row);
+        let shape_ids = shapes.map((s) => s.shape_id);
+        if (shape_ids.length === 0) return true;
+
+        let allSelected = shape_ids.every(
+            (id) => this.regions_info.selected_shapes.indexOf(id) !== -1);
+        let deselect = multipleSelection && allSelected;
+
+        if (!shift) this.last_selected_row_key = row.key;
 
         this.context.publish(
             REGIONS_SET_PROPERTY, {
                 config_id: this.regions_info.image_info.config_id,
                 property: 'selected',
                 shapes: shape_ids,
-                clear: true,
-                value: true,
-                center: true
+                clear: !multipleSelection,
+                value: !deselect,
+                center: !multipleSelection
             });
+        return true;
     }
 }
