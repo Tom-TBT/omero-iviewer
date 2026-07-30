@@ -279,6 +279,25 @@ export default class RegionsTags {
     }
 
     /**
+     * Css classes for a shape's type icon (rectangle/ellipse/line/...),
+     * matching the classes used in regions-list.html. Empty for rows that
+     * are not a real, present shape.
+     * @param {Object} row
+     */
+    shapeIconClass(row) {
+        if (row.type !== 'shape' || row.node.missing) return '';
+        let shape = row.node.shape;
+        let markerStart =
+            typeof shape.MarkerStart === 'string' ?
+                shape.MarkerStart.toLowerCase() : '';
+        let markerEnd =
+            typeof shape.MarkerEnd === 'string' ?
+                shape.MarkerEnd.toLowerCase() : '';
+        return shape.type.toLowerCase() + '-icon marker-' +
+            markerStart + markerEnd;
+    }
+
+    /**
      * Builds the Tagset > Tag > Roi > Shape tree from tags_info (the flat
      * roi_tags/shape_tags/tags/tagsets response) and regions_info.data (the
      * live Roi/Shape objects, reused by reference so selection/visibility

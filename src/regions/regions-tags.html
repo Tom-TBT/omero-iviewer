@@ -119,11 +119,15 @@
                                     ${row.node.show ? '&#9660;' : '&#9658;'}
                                 </span>
                             </span>
-                            <input type="checkbox"
-                                if.bind="!row.node.missing"
-                                title="Show/Hide"
-                                checked.one-way="isRowVisible(row)"
-                                change.delegate="toggleVisibility(row, $event)"/>
+                            <span class="tags-show-right">
+                                <input type="checkbox"
+                                    if.bind="!row.node.missing"
+                                    title="Show/Hide"
+                                    checked.one-way="isRowVisible(row)"
+                                    change.delegate="toggleVisibility(row, $event)"/>
+                                <span class="shape-type ${shapeIconClass(row)}"
+                                    if.bind="row.type === 'shape' && !row.node.missing"></span>
+                            </span>
                         </div>
                         <div class="regions-table-col shape-z">
                             ${row.type === 'shape' && !row.node.missing && row.node.shape.TheZ !== -1 ?

@@ -1171,6 +1171,13 @@ thumbnail-slider img {
     margin-left: 4px;
     vertical-align: middle;
 }
+.tags-show-right {
+    display: flex;
+    align-items: center;
+}
+.tags-show-right .shape-type {
+    height: 16px;
+}
 .tags-label {
     flex: 1 1 auto;
     text-align: left;
